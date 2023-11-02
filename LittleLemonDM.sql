@@ -54,14 +54,15 @@ COLLATE = utf8mb4_0900_ai_ci;
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS `little_lemon_db`.`bookings` (
   `Booking_id` INT NOT NULL,
-  `Booking_date` DATETIME NOT NULL,
-  `Cutomer_id` INT NOT NULL,
-  `Employee_id` INT NOT NULL,
+  `booking_date` DATE NOT NULL,
+  `customer_id` INT NULL DEFAULT NULL,
+  `Employee_id` INT NULL DEFAULT NULL,
+  `table_number` INT NOT NULL,
   PRIMARY KEY (`Booking_id`),
-  INDEX `Customer_id_idx` (`Cutomer_id` ASC) VISIBLE,
+  INDEX `Customer_id_idx` (`customer_id` ASC) VISIBLE,
   INDEX `Employee_id_idx` (`Employee_id` ASC) VISIBLE,
   CONSTRAINT `Customer_id`
-    FOREIGN KEY (`Cutomer_id`)
+    FOREIGN KEY (`customer_id`)
     REFERENCES `little_lemon_db`.`customers` (`Customer_id`),
   CONSTRAINT `Employee_id`
     FOREIGN KEY (`Employee_id`)
@@ -133,6 +134,72 @@ USE `little_lemon_db` ;
 CREATE TABLE IF NOT EXISTS `little_lemon_db`.`ordersview` (`Order_id` INT, `quantity` INT, `Cost` INT);
 
 -- -----------------------------------------------------
+-- procedure AddBooking
+-- -----------------------------------------------------
+
+DELIMITER $$
+USE `little_lemon_db`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `AddBooking`(
+  IN booking_id INT,
+  IN customer_id INT,
+  IN booking_date DATE,
+  IN employee_id INT,
+  IN table_number INT
+)
+BEGIN
+  INSERT INTO Bookings (BookingId, CustomerId, BookingDate, EmployeeId, TableNumber) VALUES (booking_id, customer_id, booking_date, employee_id, table_number);
+  select 'new booking added' as confirmation;
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure AddValidBooking
+-- -----------------------------------------------------
+
+DELIMITER $$
+USE `little_lemon_db`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `AddValidBooking`(IN booking_date DATE, IN table_number INT)
+BEGIN
+    DECLARE booked BOOLEAN;
+
+    START TRANSACTION;
+    
+    SELECT CASE WHEN EXISTS (
+        SELECT 1
+        FROM Bookings
+        WHERE DATE(Booking_Date) = DATE(booking_date) AND Table_Number = table_number
+    ) THEN TRUE ELSE FALSE END INTO booked;
+
+
+    IF booked THEN
+        ROLLBACK;
+        SELECT CONCAT("table ", table_number, " is booked - booking canceled") AS booking_status;
+    ELSE
+        SELECT CONCAT("table ", table_number, " is free - booked successfully") AS booking_status;
+        INSERT INTO Bookings (booking_id, Booking_Date, Table_Number) VALUES (5, booking_date, table_number);
+        COMMIT;
+    END IF;
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure CancelBooking
+-- -----------------------------------------------------
+
+DELIMITER $$
+USE `little_lemon_db`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `CancelBooking`(
+  IN booking_id INT
+)
+BEGIN
+  DELETE FROM Bookings WHERE Booking_Id = booking_id;
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
 -- procedure CancelOrder
 -- -----------------------------------------------------
 
@@ -151,6 +218,27 @@ END$$
 DELIMITER ;
 
 -- -----------------------------------------------------
+-- procedure CheckBooking
+-- -----------------------------------------------------
+
+DELIMITER $$
+USE `little_lemon_db`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `CheckBooking`(IN booking_date DATE, IN table_number INT)
+BEGIN
+  DECLARE is_booked BOOLEAN;
+
+  SELECT CASE WHEN EXISTS (SELECT 1 FROM Bookings WHERE Booking_Date = booking_date AND Table_Number = table_number) THEN TRUE ELSE FALSE END into is_booked;
+
+  IF is_booked THEN
+    SELECT concat('Table ', table_number, ' is booked') as booking_status;
+  ELSE
+    SELECT concat('Table ', table_number, ' is not available') as booking_status;
+  END IF;
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
 -- procedure GetMaxQuantity
 -- -----------------------------------------------------
 
@@ -160,6 +248,22 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `GetMaxQuantity`()
 BEGIN
   SELECT MAX(Quantity) AS MaxQuantity
   FROM Orders;
+END$$
+
+DELIMITER ;
+
+-- -----------------------------------------------------
+-- procedure UpdateBooking
+-- -----------------------------------------------------
+
+DELIMITER $$
+USE `little_lemon_db`$$
+CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdateBooking`(
+IN booking_id INT,
+IN booking_date DATE
+)
+BEGIN
+  UPDATE Bookings SET BookingDate = booking_date WHERE BookingId = booking_id;
 END$$
 
 DELIMITER ;
