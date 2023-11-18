@@ -165,7 +165,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `AddBooking`(
   IN table_number INT
 )
 BEGIN
-  INSERT INTO Bookings (BookingId, CustomerId, BookingDate, EmployeeId, TableNumber) VALUES (booking_id, customer_id, booking_date, employee_id, table_number);
+  INSERT INTO bookings (booking_id, customer_id, booking_date, employee_id, table_number) VALUES (booking_id, customer_id, booking_date, employee_id, table_number);
   SELECT 'new booking added' AS confirmation;
 END$$
 
@@ -188,7 +188,7 @@ BEGIN
     
     SELECT CASE WHEN EXISTS (
         SELECT 1
-        FROM Bookings
+        FROM bookings
         WHERE DATE(Booking_Date) = DATE(booking_date) AND Table_Number = table_number
     ) THEN TRUE ELSE FALSE END INTO booked;
 
@@ -197,7 +197,7 @@ BEGIN
         SELECT CONCAT("table ", table_number, " is booked - booking canceled") AS booking_status;
     ELSE
         SELECT CONCAT("table ", table_number, " is free - booked successfully") AS booking_status;
-        INSERT INTO Bookings (booking_id, Booking_Date, Table_Number) VALUES (5, booking_date, table_number);
+        INSERT INTO bookings (booking_id, Booking_Date, Table_Number) VALUES (5, booking_date, table_number);
         COMMIT;
     END IF;
 END$$
@@ -217,7 +217,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `CancelBooking`(
   IN booking_id INT
 )
 BEGIN
-  DELETE FROM Bookings WHERE BookingId = booking_id;
+  DELETE FROM bookings WHERE booking_id = booking_id;
 END$$
 
 DELIMITER ;
@@ -235,8 +235,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `CancelOrder`(
   IN order_id INT
 )
 BEGIN
-  IF EXISTS (SELECT 1 FROM Orders WHERE OrderId = order_id) THEN
-    DELETE FROM Orders WHERE OrderId = order_id;
+  IF EXISTS (SELECT 1 FROM Orders WHERE order_id = order_id) THEN
+    DELETE FROM Orders WHERE order_id = order_id;
     SELECT CONCAT('Confirmation', '\n', 'Order ', order_id, ' is cancelled') AS confirmation;
   ELSE
     SELECT 'No order with that ID' AS confirmation;
@@ -259,7 +259,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `CheckBooking`(
   IN table_number INT
 )
 BEGIN
-  IF EXISTS (SELECT 1 FROM Bookings WHERE BookingDate = booking_date AND TableNumber = table_number) THEN
+  IF EXISTS (SELECT 1 FROM bookings WHERE booking_date = booking_date AND table_number = table_number) THEN
     SELECT 'Table is booked' AS booking_status;
   ELSE
     SELECT 'Table is not booked' AS booking_status;
@@ -269,20 +269,20 @@ END$$
 DELIMITER ;
 
 -- -----------------------------------------------------
--- procedure CheckBookingStatus
+-- procedure Checkbookingstatus
 -- -----------------------------------------------------
 
 USE `little_lemon_db`;
-DROP procedure IF EXISTS `little_lemon_db`.`CheckBookingStatus`;
+DROP procedure IF EXISTS `little_lemon_db`.`Checkbookingstatus`;
 
 DELIMITER $$
 USE `little_lemon_db`$$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `CheckBookingStatus`(
-    IN inputBookingDate DATE,
-    IN inputTableNumber INT
+CREATE DEFINER=`root`@`localhost` PROCEDURE `Checkbookingstatus`(
+    IN inputbooking_date DATE,
+    IN inputtable_number INT
 )
 BEGIN
-    DECLARE bookingStatusMessage VARCHAR(255);
+    DECLARE bookingstatusMessage VARCHAR(255);
 
     -- Start a transaction
     START TRANSACTION;
@@ -303,21 +303,21 @@ BEGIN
     IF EXISTS (
         SELECT 1
         FROM bookings
-        WHERE booking_Date = inputBookingDate AND table_number = inputTableNumber AND booked = 1
+        WHERE booking_Date = inputbooking_date AND table_number = inputtable_number AND booked = 1
     ) THEN
         -- Rollback the transaction and return a message
         ROLLBACK;
-        SET bookingStatusMessage = CONCAT("Table ", inputTableNumber, " is booked on ", inputBookingDate, " - booking canceled");
+        SET bookingstatusMessage = CONCAT("Table ", inputtable_number, " is booked on ", inputbooking_date, " - booking canceled");
     ELSE
         -- If the table is not booked, insert a new record and commit the transaction
-        INSERT INTO bookings (BookingDate, TableNumber, booked)
-        VALUES (inputBookingDate, inputTableNumber, 1);
+        INSERT INTO bookings (booking_date, table_number, booked)
+        VALUES (inputbooking_date, inputtable_number, 1);
         COMMIT;
-        SET bookingStatusMessage = CONCAT("Table ", inputTableNumber, " is free on ", inputBookingDate, " - booked successfully");
+        SET bookingstatusMessage = CONCAT("Table ", inputtable_number, " is free on ", inputbooking_date, " - booked successfully");
     END IF;
 
     -- Return the status message
-    SELECT bookingStatusMessage AS booking_status;
+    SELECT bookingstatusMessage AS booking_status;
 END$$
 
 DELIMITER ;
@@ -353,7 +353,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `UpdateBooking`(
   IN booking_date DATE
 )
 BEGIN
-  UPDATE Bookings SET BookingDate = booking_date WHERE BookingId = booking_id;
+  UPDATE bookings SET booking_date = booking_date WHERE booking_id = booking_id;
 END$$
 
 DELIMITER ;
